@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Boda-floral </title>
+<title>Boda-floral dorado</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Allura&family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Dancing+Script:wght@500;600;700&family=EB+Garamond:wght@400;500;600;700&family=Forum&family=Great+Vibes&family=Josefin+Sans:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600;700&family=Marcellus&family=Montserrat:wght@400;500;600;700&family=Parisienne&family=Petit+Formal+Script&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Sacramento&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -41,6 +41,10 @@
   --body-font: 'Cormorant Garamond', serif;
   --interlineado-box: 2.3;
   --interlineado-frases: 1.55;
+
+  /* --- VARIABLES REGULABLES --- */
+  --video-pos-pc: top center;        /* Controla qué parte del video se ve en PC (ej: top, center, 20% center) */
+  --separacion-boton-abajo: 28px;    /* Ajusta la separación de los botones del margen de abajo del box */
 }
 
 * {
@@ -286,6 +290,12 @@ a.button:hover {
   line-height: var(--interlineado-box);
 }
 
+/* Aplicación de separación regulable en los botones de los boxes */
+.box .btn,
+.box a.button {
+  margin-bottom: var(--separacion-boton-abajo);
+}
+
 .box h2 {
   font-family: Cinzel, serif;
   display: flex;
@@ -332,6 +342,7 @@ a.button:hover {
   grid-template-columns: repeat(4, minmax(62px, 1fr));
   gap: 10px;
   width: min(460px, 100%);
+  margin-bottom: 10px; /* Margen para armonizar con el contador */
 }
 
 .time {
@@ -407,7 +418,8 @@ a.button:hover {
   height: 100%;
   object-fit: contain;
   user-select: none;
-  pointer-events: none;
+  pointer-events: auto; /* Activado para permitir interacción */
+  cursor: zoom-in;     /* Cursor de lupa para sugerir que se agranda */
 }
 
 .carousel-btn {
@@ -554,6 +566,53 @@ a.button:hover {
   opacity: 0.85;
 }
 
+/* Estilos para el Lightbox (Zoom de Fotos) */
+.lightbox {
+  display: none;
+  position: fixed;
+  z-index: 10000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  justify-content: center;
+  align-items: center;
+  touch-action: none;
+}
+
+.lightbox-content {
+  max-width: 90%;
+  max-height: 85%;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  animation: zoomIn 0.3s ease;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  color: #ffffff;
+  font-size: 44px;
+  font-weight: 300;
+  cursor: pointer;
+  user-select: none;
+  z-index: 10001;
+  line-height: 1;
+  transition: transform 0.25s ease;
+}
+
+.lightbox-close:hover {
+  transform: scale(1.15);
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
 @media (min-width: 900px) {
   .hero {
     padding: clamp(34px, 5vh, 64px) 44px 76px;
@@ -601,7 +660,7 @@ a.button:hover {
     width: 100vw;
     height: 100vh;
     object-fit: cover;
-    object-position: center;
+    object-position: var(--video-pos-pc); /* Modificado para ser regulable y enfocar la parte superior en PC */
     box-shadow: none;
     filter: brightness(0.80) contrast(1.08) saturate(1.08);
   }
@@ -698,7 +757,8 @@ a.button:hover {
         </button>
       </div>
 
-      <audio id="music" preload="auto">
+      <!-- Añadido autoplay al elemento original de audio -->
+      <audio id="music" preload="auto" autoplay>
         <source src="musica.mp3" type="audio/mpeg">
       </audio>
 
@@ -832,6 +892,12 @@ a.button:hover {
     </div>
   </section>
 </main>
+
+<!-- Elemento HTML del Lightbox (Zoom de Fotos) -->
+<div id="lightbox" class="lightbox" onclick="cerrarLightbox()">
+  <span class="lightbox-close" onclick="cerrarLightbox()">&times;</span>
+  <img id="lightbox-img" class="lightbox-content" src="" alt="" onclick="event.stopPropagation()">
+</div>
       
 <script>
 const CONFIG = {
@@ -1531,6 +1597,38 @@ function copiarDato(valor) {
   input.remove();
 }
 
+// Lógica de Zoom / Lightbox con soporte para botón de retroceso nativo
+function abrirLightbox(src) {
+  const lightbox = document.getElementById("lightbox");
+  const img = document.getElementById("lightbox-img");
+  img.src = src;
+  lightbox.style.display = "flex";
+  document.body.style.overflow = "hidden"; // Detiene el scroll de fondo
+
+  // Guardamos un estado en el historial de navegación para poder volver atrás con el celular sin salirnos
+  window.history.pushState({ lightboxOpen: true }, "");
+}
+
+function cerrarLightbox(isPopState = false) {
+  const lightbox = document.getElementById("lightbox");
+  if (!lightbox || lightbox.style.display === "none") return;
+
+  lightbox.style.display = "none";
+  document.body.style.overflow = ""; // Restaura el scroll
+
+  // Si cerramos manualmente (clic en la cruz o fuera de la foto) y el historial se alteró, retrocedemos
+  if (!isPopState) {
+    if (window.history.state && window.history.state.lightboxOpen) {
+      window.history.back();
+    }
+  }
+}
+
+// Evento que escucha el botón "Atrás" físico/del navegador del teléfono
+window.addEventListener("popstate", (event) => {
+  cerrarLightbox(true);
+});
+
 function iniciarCarrusel() {
   const track = document.getElementById("carouselTrack");
   const dots = document.getElementById("carouselDots");
@@ -1549,6 +1647,9 @@ function iniciarCarrusel() {
     img.className = "slide";
     img.src = foto;
     img.alt = `Recuerdo ${index + 1}`;
+    
+    // Habilitar evento clic para agrandar foto
+    img.addEventListener("click", () => abrirLightbox(foto));
 
     frame.appendChild(bg);
     frame.appendChild(img);
@@ -1622,13 +1723,42 @@ function reiniciarAutoplay() {
   sliderTimer = setInterval(() => cambiarSlide(1), 3600);
 }
 
+// Intenta reproducir la música de manera automática y fluida
+function intentarAutoplay() {
+  const music = document.getElementById("music");
+  const playPromise = music.play();
+
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      console.log("Autoplay de música iniciado con éxito.");
+    }).catch(error => {
+      console.log("Autoplay bloqueado temporalmente por el navegador. Esperando interacción.");
+      // Configuramos una escucha en la primera interacción para que suene tan pronto toquen o deslicen
+      const reproducirConInteraccion = () => {
+        music.play().then(() => {
+          document.removeEventListener('click', reproducirConInteraccion);
+          document.removeEventListener('touchstart', reproducirConInteraccion);
+          document.removeEventListener('scroll', reproducirConInteraccion);
+        }).catch(err => console.log("Error al iniciar reproducción:", err));
+      };
+      document.addEventListener('click', reproducirConInteraccion, { once: true });
+      document.addEventListener('touchstart', reproducirConInteraccion, { once: true });
+      document.addEventListener('scroll', reproducirConInteraccion, { once: true });
+    });
+  }
+}
+
 aplicarColores();
 aplicarFuentes();
 cargarDatos();
 configurarExtras();
 actualizarCuentaRegresiva();
 setInterval(actualizarCuentaRegresiva, 1000);
-window.addEventListener("load", iniciarCarrusel);
+
+window.addEventListener("load", () => {
+  iniciarCarrusel();
+  intentarAutoplay(); // Se ejecuta inmediatamente al cargar la página
+});
 </script>
 
 </body>
